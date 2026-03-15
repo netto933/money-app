@@ -1,271 +1,418 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>支出管理</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
 body{
 font-family:sans-serif;
-background:#f4f4f4;
-text-align:center;
+background:#f5f5f5;
 padding:20px;
 }
 
 .card{
 background:white;
 padding:20px;
-margin:15px auto;
 border-radius:12px;
-max-width:400px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
+margin-bottom:20px;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
 .big{
-font-size:34px;
+font-size:28px;
 font-weight:bold;
 }
 
-button,input,select{
-font-size:16px;
+.small{
+color:blue;
+font-size:14px;
+}
+
+input,select,button{
+
+width:100%;
 padding:10px;
-margin:5px;
-width:90%;
-border-radius:8px;
-border:1px solid #ccc;
+margin-top:8px;
+margin-bottom:10px;
+font-size:16px;
+
 }
 
 button{
-background:#4CAF50;
+
+background:#2c7be5;
 color:white;
 border:none;
+border-radius:8px;
+
 }
 
-.warning{
-color:red;
-font-weight:bold;
-}
+.deleteBtn{
 
-.safe{
-color:green;
-font-weight:bold;
-}
+background:#e55353;
+margin-top:5px;
 
-.list{
-text-align:left;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<h2>支出管理</h2>
-
 <div class="card">
 
 <p>今月の予算</p>
-<div id="budget" class="big"></div>
 
-<button onclick="changeBudget()">予算変更</button>
+<div id="budget" class="big">¥50000</div>
+
+<button onclick="changeBudget()">変更</button>
 
 </div>
 
 <div class="card">
 
 <p>残り</p>
+
 <div id="remain" class="big"></div>
 
-</div>
-
-<div class="card">
-
-<h3>支出を追加</h3>
-
-<input id="amount" type="number" placeholder="金額">
-
-<select id="category">
-<option>食費</option>
-<option>日用品</option>
-<option>趣味</option>
-<option>その他</option>
-</select>
-
-<button onclick="addExpense()">追加</button>
+<div id="remainOriginal" class="small"></div>
 
 </div>
 
 <div class="card">
 
-<h3>履歴（最近30件）</h3>
+<p>商品名</p>
+<input id="item">
 
-<div id="history" class="list"></div>
+<p>元の金額</p>
+<input id="amount" type="number">
+
+<p>値引き金額</p>
+<input id="discountAmount" type="number">
+
+<p>値引き率（%）</p>
+<input id="discountPercent" type="number">
+
+<p>カテゴリ</p>
+
+<select id="category"></select>
+
+<button onclick="addExpense()">記録</button>
 
 </div>
 
 <div class="card">
 
-<h3>買う前チェック</h3>
+<p>カテゴリ別</p>
 
-<input id="checkAmount" type="number" placeholder="買おうとしている金額">
+<canvas id="chart"></canvas>
 
-<button onclick="checkBuy()">判定</button>
+</div>
 
-<p id="result"></p>
+<div class="card">
+
+<p>履歴</p>
+
+<div id="history"></div>
+
+</div>
+
+<div class="card">
+
+<p>カテゴリ管理</p>
+
+<div id="categoryList"></div>
+
+<input id="newCategory" placeholder="新しいカテゴリ">
+
+<button onclick="addCategory()">カテゴリ追加</button>
+
+</div>
+
+<div class="card">
+
+<p>データ</p>
+
+<button onclick="exportCSV()">CSVダウンロード</button>
 
 </div>
 
 <script>
 
-// ===== 初期データ =====
-
-let budget = Number(localStorage.getItem("budget")) || 50000
+let budget = localStorage.getItem("budget") || 50000
+document.getElementById("budget").innerText="¥"+budget
 
 let expenses = JSON.parse(localStorage.getItem("expenses") || "[]")
 
-// ===== 月変更チェック =====
+let categories = JSON.parse(localStorage.getItem("categories") || 
+'["食品","日用品","市販薬・サプリメント","医療費","本・参考書","趣味","お酒","その他"]')
 
-function checkMonthReset(){
+function saveCategories(){
 
-let now = new Date()
+localStorage.setItem("categories",JSON.stringify(categories))
 
-let currentMonth = now.getFullYear()+"-"+(now.getMonth()+1)
-
-let savedMonth = localStorage.getItem("month")
-
-if(savedMonth !== currentMonth){
-
-expenses = []
-
-localStorage.setItem("expenses",JSON.stringify(expenses))
-
-localStorage.setItem("month",currentMonth)
+renderCategories()
 
 }
 
-}
+function renderCategories(){
 
-checkMonthReset()
+let select=document.getElementById("category")
+select.innerHTML=""
 
-// ===== 画面更新 =====
+categories.forEach(c=>{
 
-function update(){
-
-let spent = expenses.reduce((a,b)=>a+b.amount,0)
-
-let remain = budget - spent
-
-document.getElementById("budget").innerText="¥"+budget
-document.getElementById("remain").innerText="¥"+remain
-
-updateHistory()
-
-}
-
-// ===== 支出追加 =====
-
-function addExpense(){
-
-let amount = Number(document.getElementById("amount").value)
-
-let category = document.getElementById("category").value
-
-if(!amount) return
-
-expenses.unshift({amount,category})
-
-if(expenses.length>30){
-expenses.pop()
-}
-
-localStorage.setItem("expenses",JSON.stringify(expenses))
-
-document.getElementById("amount").value=""
-
-update()
-
-}
-
-// ===== 履歴更新 =====
-
-function updateHistory(){
-
-let history = document.getElementById("history")
-
-history.innerHTML=""
-
-expenses.forEach(e=>{
-
-let div = document.createElement("div")
-
-div.innerText = e.category+" ¥"+e.amount
-
-history.appendChild(div)
+let option=document.createElement("option")
+option.text=c
+select.add(option)
 
 })
 
+let listHTML=""
+
+categories.forEach((c,i)=>{
+
+listHTML+=c+" <button class='deleteBtn' onclick='deleteCategory("+i+")'>削除</button><br>"
+
+})
+
+document.getElementById("categoryList").innerHTML=listHTML
+
 }
 
-// ===== 予算変更 =====
+function addCategory(){
+
+let newCat=document.getElementById("newCategory").value
+
+if(!newCat)return
+
+categories.push(newCat)
+
+document.getElementById("newCategory").value=""
+
+saveCategories()
+
+}
+
+function deleteCategory(i){
+
+if(confirm("削除してよろしいですか？")){
+
+categories.splice(i,1)
+
+saveCategories()
+
+}
+
+}
+
+renderCategories()
+
+let lastMonth = localStorage.getItem("month")
+let nowMonth = new Date().getMonth()
+
+if(lastMonth != nowMonth){
+
+expenses=[]
+localStorage.setItem("expenses",JSON.stringify(expenses))
+localStorage.setItem("month",nowMonth)
+
+}
 
 function changeBudget(){
 
-let newBudget = prompt("新しい月予算を入力")
+let newBudget = prompt("新しい予算")
 
-if(!newBudget) return
+if(newBudget){
 
 budget = Number(newBudget)
 
 localStorage.setItem("budget",budget)
 
+document.getElementById("budget").innerText="¥"+budget
+
 update()
 
 }
 
-// ===== 買う前チェック =====
+}
 
-function checkBuy(){
+function addExpense(){
 
-let price = Number(document.getElementById("checkAmount").value)
+let item=document.getElementById("item").value
 
-let spent = expenses.reduce((a,b)=>a+b.amount,0)
+let amount=Number(document.getElementById("amount").value)
 
-let remain = budget - spent
+let discountAmount=Number(document.getElementById("discountAmount").value)
 
-let result = document.getElementById("result")
+let discountPercent=Number(document.getElementById("discountPercent").value)
 
-if(price > remain){
+let category=document.getElementById("category").value
 
-result.innerHTML="⚠ 予算オーバー"
-result.className="warning"
+if(!amount)return
 
-return
+let finalAmount=amount
+
+if(discountPercent){
+
+finalAmount = amount - (amount*discountPercent/100)
 
 }
 
-let percent = (price/remain)*100
+if(discountAmount){
 
-if(percent > 30){
+finalAmount = amount - discountAmount
 
-result.innerHTML="⚠ 残りの"+Math.round(percent)+"%を使います"
-result.className="warning"
+}
 
-}else{
+expenses.push({
 
-result.innerHTML="OK 範囲内"
-result.className="safe"
+item:item,
+amount:amount,
+final:Math.round(finalAmount),
+category:category,
+date:new Date().toLocaleDateString()
+
+})
+
+localStorage.setItem("expenses",JSON.stringify(expenses))
+
+document.getElementById("item").value=""
+document.getElementById("amount").value=""
+document.getElementById("discountAmount").value=""
+document.getElementById("discountPercent").value=""
+
+update()
+
+}
+
+function deleteExpense(i){
+
+if(confirm("削除してよろしいですか？")){
+
+expenses.splice(i,1)
+
+localStorage.setItem("expenses",JSON.stringify(expenses))
+
+update()
 
 }
 
 }
 
-// ===== 初期表示 =====
+function update(){
+
+let total=0
+let totalOriginal=0
+
+let historyHTML=""
+
+let categoryTotal={}
+
+expenses.forEach((e,i)=>{
+
+total+=e.final
+totalOriginal+=e.amount
+
+historyHTML+=e.date+" "+e.category+" "+e.item+" ¥"+e.final
+
+if(e.final!=e.amount){
+
+historyHTML+=" (元¥"+e.amount+")"
+
+}
+
+historyHTML+="<br><button class='deleteBtn' onclick='deleteExpense("+i+")'>削除</button><br><br>"
+
+if(!categoryTotal[e.category]){
+
+categoryTotal[e.category]=0
+
+}
+
+categoryTotal[e.category]+=e.final
+
+})
+
+document.getElementById("history").innerHTML=historyHTML
+
+document.getElementById("remain").innerText="¥"+(budget-total)
+
+document.getElementById("remainOriginal").innerText="（値引き無しの場合：¥"+(budget-totalOriginal)+"）"
+
+drawChart(categoryTotal)
+
+}
+
+function exportCSV(){
+
+let csv="日付,カテゴリ,商品名,元値,支払額\n"
+
+expenses.forEach(e=>{
+
+csv+=`${e.date},${e.category},${e.item},${e.amount},${e.final}\n`
+
+})
+
+let blob=new Blob([csv],{type:"text/csv"})
+
+let link=document.createElement("a")
+
+link.href=URL.createObjectURL(blob)
+
+link.download="money_export.csv"
+
+link.click()
+
+}
+
+let chart
+
+function drawChart(data){
+
+let labels=Object.keys(data)
+let values=Object.values(data)
+
+if(chart)chart.destroy()
+
+chart=new Chart(
+
+document.getElementById("chart"),
+
+{
+
+type:"pie",
+
+data:{
+
+labels:labels,
+
+datasets:[{
+
+data:values
+
+}]
+
+}
+
+}
+
+)
+
+}
 
 update()
 
 </script>
 
 </body>
+
 </html>
