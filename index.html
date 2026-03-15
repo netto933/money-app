@@ -119,13 +119,21 @@ text-align:left;
 
 <script>
 
+// ===== 初期データ =====
+
 let budget = Number(localStorage.getItem("budget")) || 50000
 
 let expenses = JSON.parse(localStorage.getItem("expenses") || "[]")
 
-let currentMonth = new Date().getMonth()
+// ===== 月変更チェック =====
 
-let savedMonth = Number(localStorage.getItem("month"))
+function checkMonthReset(){
+
+let now = new Date()
+
+let currentMonth = now.getFullYear()+"-"+(now.getMonth()+1)
+
+let savedMonth = localStorage.getItem("month")
 
 if(savedMonth !== currentMonth){
 
@@ -136,6 +144,12 @@ localStorage.setItem("expenses",JSON.stringify(expenses))
 localStorage.setItem("month",currentMonth)
 
 }
+
+}
+
+checkMonthReset()
+
+// ===== 画面更新 =====
 
 function update(){
 
@@ -150,9 +164,12 @@ updateHistory()
 
 }
 
+// ===== 支出追加 =====
+
 function addExpense(){
 
 let amount = Number(document.getElementById("amount").value)
+
 let category = document.getElementById("category").value
 
 if(!amount) return
@@ -170,6 +187,8 @@ document.getElementById("amount").value=""
 update()
 
 }
+
+// ===== 履歴更新 =====
 
 function updateHistory(){
 
@@ -189,6 +208,8 @@ history.appendChild(div)
 
 }
 
+// ===== 予算変更 =====
+
 function changeBudget(){
 
 let newBudget = prompt("新しい月予算を入力")
@@ -202,6 +223,8 @@ localStorage.setItem("budget",budget)
 update()
 
 }
+
+// ===== 買う前チェック =====
 
 function checkBuy(){
 
@@ -219,6 +242,7 @@ result.innerHTML="⚠ 予算オーバー"
 result.className="warning"
 
 return
+
 }
 
 let percent = (price/remain)*100
@@ -236,6 +260,8 @@ result.className="safe"
 }
 
 }
+
+// ===== 初期表示 =====
 
 update()
 
