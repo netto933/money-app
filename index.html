@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>支出管理</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -30,61 +28,35 @@ font-size:28px;
 font-weight:bold;
 }
 
-.small{
-color:blue;
-font-size:14px;
-}
-
 input,select,button{
-
 width:100%;
 padding:10px;
 margin-top:8px;
 margin-bottom:10px;
 font-size:16px;
-
 }
 
 button{
-
 background:#2c7be5;
 color:white;
 border:none;
 border-radius:8px;
-
-}
-
-.deleteBtn{
-
-background:#e55353;
-margin-top:5px;
-
 }
 
 </style>
-
 </head>
 
 <body>
 
 <div class="card">
-
 <p>今月の予算</p>
-
 <div id="budget" class="big">¥50000</div>
-
 <button onclick="changeBudget()">変更</button>
-
 </div>
 
 <div class="card">
-
 <p>残り</p>
-
 <div id="remain" class="big"></div>
-
-<div id="remainOriginal" class="small"></div>
-
 </div>
 
 <div class="card">
@@ -92,18 +64,23 @@ margin-top:5px;
 <p>商品名</p>
 <input id="item">
 
-<p>元の金額</p>
+<p>金額</p>
 <input id="amount" type="number">
-
-<p>値引き金額</p>
-<input id="discountAmount" type="number">
-
-<p>値引き率（%）</p>
-<input id="discountPercent" type="number">
 
 <p>カテゴリ</p>
 
-<select id="category"></select>
+<select id="category">
+
+<option>食品</option>
+<option>日用品</option>
+<option>市販薬・サプリメント</option>
+<option>医療費</option>
+<option>本・参考書</option>
+<option>趣味</option>
+<option>お酒</option>
+<option>その他</option>
+
+</select>
 
 <button onclick="addExpense()">記録</button>
 
@@ -111,8 +88,7 @@ margin-top:5px;
 
 <div class="card">
 
-<p>カテゴリ別</p>
-
+<p>今月カテゴリ別</p>
 <canvas id="chart"></canvas>
 
 </div>
@@ -120,28 +96,7 @@ margin-top:5px;
 <div class="card">
 
 <p>履歴</p>
-
 <div id="history"></div>
-
-</div>
-
-<div class="card">
-
-<p>カテゴリ管理</p>
-
-<div id="categoryList"></div>
-
-<input id="newCategory" placeholder="新しいカテゴリ">
-
-<button onclick="addCategory()">カテゴリ追加</button>
-
-</div>
-
-<div class="card">
-
-<p>データ</p>
-
-<button onclick="exportCSV()">CSVダウンロード</button>
 
 </div>
 
@@ -152,71 +107,8 @@ document.getElementById("budget").innerText="¥"+budget
 
 let expenses = JSON.parse(localStorage.getItem("expenses") || "[]")
 
-let categories = JSON.parse(localStorage.getItem("categories") || 
-'["食品","日用品","市販薬・サプリメント","医療費","本・参考書","趣味","お酒","その他"]')
-
-function saveCategories(){
-
-localStorage.setItem("categories",JSON.stringify(categories))
-
-renderCategories()
-
-}
-
-function renderCategories(){
-
-let select=document.getElementById("category")
-select.innerHTML=""
-
-categories.forEach(c=>{
-
-let option=document.createElement("option")
-option.text=c
-select.add(option)
-
-})
-
-let listHTML=""
-
-categories.forEach((c,i)=>{
-
-listHTML+=c+" <button class='deleteBtn' onclick='deleteCategory("+i+")'>削除</button><br>"
-
-})
-
-document.getElementById("categoryList").innerHTML=listHTML
-
-}
-
-function addCategory(){
-
-let newCat=document.getElementById("newCategory").value
-
-if(!newCat)return
-
-categories.push(newCat)
-
-document.getElementById("newCategory").value=""
-
-saveCategories()
-
-}
-
-function deleteCategory(i){
-
-if(confirm("削除してよろしいですか？")){
-
-categories.splice(i,1)
-
-saveCategories()
-
-}
-
-}
-
-renderCategories()
-
 let lastMonth = localStorage.getItem("month")
+
 let nowMonth = new Date().getMonth()
 
 if(lastMonth != nowMonth){
@@ -251,35 +143,15 @@ let item=document.getElementById("item").value
 
 let amount=Number(document.getElementById("amount").value)
 
-let discountAmount=Number(document.getElementById("discountAmount").value)
-
-let discountPercent=Number(document.getElementById("discountPercent").value)
-
 let category=document.getElementById("category").value
 
 if(!amount)return
-
-let finalAmount=amount
-
-if(discountPercent){
-
-finalAmount = amount - (amount*discountPercent/100)
-
-}
-
-if(discountAmount){
-
-finalAmount = amount - discountAmount
-
-}
 
 expenses.push({
 
 item:item,
 amount:amount,
-final:Math.round(finalAmount),
-category:category,
-date:new Date().toLocaleDateString()
+category:category
 
 })
 
@@ -287,50 +159,24 @@ localStorage.setItem("expenses",JSON.stringify(expenses))
 
 document.getElementById("item").value=""
 document.getElementById("amount").value=""
-document.getElementById("discountAmount").value=""
-document.getElementById("discountPercent").value=""
 
 update()
-
-}
-
-function deleteExpense(i){
-
-if(confirm("削除してよろしいですか？")){
-
-expenses.splice(i,1)
-
-localStorage.setItem("expenses",JSON.stringify(expenses))
-
-update()
-
-}
 
 }
 
 function update(){
 
 let total=0
-let totalOriginal=0
 
 let historyHTML=""
 
 let categoryTotal={}
 
-expenses.forEach((e,i)=>{
+expenses.forEach(e=>{
 
-total+=e.final
-totalOriginal+=e.amount
+total+=e.amount
 
-historyHTML+=e.date+" "+e.category+" "+e.item+" ¥"+e.final
-
-if(e.final!=e.amount){
-
-historyHTML+=" (元¥"+e.amount+")"
-
-}
-
-historyHTML+="<br><button class='deleteBtn' onclick='deleteExpense("+i+")'>削除</button><br><br>"
+historyHTML+=e.category+" "+e.item+" ¥"+e.amount+"<br>"
 
 if(!categoryTotal[e.category]){
 
@@ -338,7 +184,7 @@ categoryTotal[e.category]=0
 
 }
 
-categoryTotal[e.category]+=e.final
+categoryTotal[e.category]+=e.amount
 
 })
 
@@ -346,31 +192,7 @@ document.getElementById("history").innerHTML=historyHTML
 
 document.getElementById("remain").innerText="¥"+(budget-total)
 
-document.getElementById("remainOriginal").innerText="（値引き無しの場合：¥"+(budget-totalOriginal)+"）"
-
 drawChart(categoryTotal)
-
-}
-
-function exportCSV(){
-
-let csv="日付,カテゴリ,商品名,元値,支払額\n"
-
-expenses.forEach(e=>{
-
-csv+=`${e.date},${e.category},${e.item},${e.amount},${e.final}\n`
-
-})
-
-let blob=new Blob([csv],{type:"text/csv"})
-
-let link=document.createElement("a")
-
-link.href=URL.createObjectURL(blob)
-
-link.download="money_export.csv"
-
-link.click()
 
 }
 
@@ -379,6 +201,7 @@ let chart
 function drawChart(data){
 
 let labels=Object.keys(data)
+
 let values=Object.values(data)
 
 if(chart)chart.destroy()
@@ -414,5 +237,4 @@ update()
 </script>
 
 </body>
-
 </html>
