@@ -155,7 +155,7 @@ display:none;
 
 <div class="card">
 
-<button onclick="toggleHistory()">＋履歴</button>
+<button id="historyBtn" onclick="toggleHistory()">＋履歴</button>
 
 <div id="historyArea" class="hidden">
 
@@ -212,6 +212,21 @@ function toggleDiscount(){
 let area=document.getElementById("discountArea")
 
 area.classList.toggle("hidden")
+
+}
+
+function toggleHistory(){
+
+let area=document.getElementById("historyArea")
+let btn=document.getElementById("historyBtn")
+
+area.classList.toggle("hidden")
+
+if(area.classList.contains("hidden")){
+btn.innerText="＋履歴"
+}else{
+btn.innerText="－履歴"
+}
 
 }
 
