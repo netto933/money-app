@@ -79,15 +79,17 @@ margin-top:5px;
 
 <div class="card">
 
-<p>残り</p>
+<p>データ</p>
 
-<div id="remain" class="big"></div>
+<button onclick="exportCSV()">CSVダウンロード</button>
 
-<div id="remainOriginal" class="small"></div>
+<button onclick="exportJSON()">JSONバックアップ保存</button>
+
+<input type="file" id="importFile">
+
+<button onclick="importJSON()">JSON復元</button>
 
 </div>
-
-<div class="card">
 
 <p>商品名</p>
 <input id="item">
@@ -410,7 +412,56 @@ data:values
 }
 
 update()
+function exportJSON(){
 
+let data={
+
+budget:budget,
+expenses:expenses,
+categories:categories
+
+}
+
+let blob=new Blob([JSON.stringify(data)],{type:"application/json"})
+
+let link=document.createElement("a")
+
+link.href=URL.createObjectURL(blob)
+
+link.download="money_backup.json"
+
+link.click()
+
+}
+
+function importJSON(){
+
+let file=document.getElementById("importFile").files[0]
+
+if(!file)return
+
+let reader=new FileReader()
+
+reader.onload=function(){
+
+let data=JSON.parse(reader.result)
+
+budget=data.budget
+expenses=data.expenses
+categories=data.categories
+
+localStorage.setItem("budget",budget)
+localStorage.setItem("expenses",JSON.stringify(expenses))
+localStorage.setItem("categories",JSON.stringify(categories))
+
+renderCategories()
+update()
+
+}
+
+reader.readAsText(file)
+
+}
 </script>
 
 </body>
