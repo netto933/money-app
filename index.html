@@ -7,11 +7,13 @@
 
 <title>Money</title>
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+<link rel="manifest" href="manifest.json">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+
+*{box-sizing:border-box;}
 
 body{
 font-family:sans-serif;
@@ -21,39 +23,30 @@ justify-content:center;
 }
 
 .app{
-
 width:100%;
 max-width:420px;
 padding:15px;
-
 }
 
 .card{
-
 background:white;
 padding:18px;
 border-radius:14px;
 margin-bottom:16px;
 box-shadow:0 3px 8px rgba(0,0,0,0.1);
-
 }
 
 .big{
-
 font-size:30px;
 font-weight:bold;
-
 }
 
 .small{
-
 color:#3a7afe;
 font-size:13px;
-
 }
 
 input,select,button{
-
 width:100%;
 padding:12px;
 margin-top:8px;
@@ -61,27 +54,20 @@ margin-bottom:10px;
 font-size:16px;
 border-radius:8px;
 border:1px solid #ddd;
-
 }
 
 button{
-
 background:#3a7afe;
 color:white;
 border:none;
-
 }
 
 .deleteBtn{
-
 background:#ff4d4d;
-
 }
 
 .hidden{
-
 display:none;
-
 }
 
 </style>
@@ -93,23 +79,15 @@ display:none;
 <div class="app">
 
 <div class="card">
-
 <p>今月の予算</p>
-
 <div id="budget" class="big">未設定</div>
-
 <button onclick="changeBudget()">予算設定</button>
-
 </div>
 
 <div class="card">
-
 <p>残り</p>
-
 <div id="remain" class="big">¥0</div>
-
 <div id="remainOriginal" class="small"></div>
-
 </div>
 
 <div class="card">
@@ -123,7 +101,7 @@ display:none;
 <p>商品名</p>
 <input id="item">
 
-<button onclick="toggleDiscount()">＋値引き</button>
+<button id="discountBtn" onclick="toggleDiscount()">＋値引き</button>
 
 <div id="discountArea" class="hidden">
 
@@ -142,22 +120,23 @@ display:none;
 <div class="card">
 
 <p>カテゴリ別</p>
-
 <canvas id="chart"></canvas>
 
 </div>
 
 <div class="card">
 
-<p>履歴</p>
+<button id="historyBtn" onclick="toggleHistory()">＋履歴</button>
 
+<div id="historyArea" class="hidden">
 <div id="history"></div>
+</div>
 
 </div>
 
 <div class="card">
 
-<button onclick="toggleCategoryManager()">カテゴリ管理</button>
+<button id="catBtn" onclick="toggleCategoryManager()">＋カテゴリ管理</button>
 
 <div id="categoryManager" class="hidden">
 
@@ -189,9 +168,9 @@ display:none;
 
 <script>
 
-let budget = localStorage.getItem("budget")
-let expenses = JSON.parse(localStorage.getItem("expenses") || "[]")
-let categories = JSON.parse(localStorage.getItem("categories") || "[]")
+let budget = localStorage.getItem("money_app_budget")
+let expenses = JSON.parse(localStorage.getItem("money_app_expenses") || "[]")
+let categories = JSON.parse(localStorage.getItem("money_app_categories") || "[]")
 
 if(budget){
 document.getElementById("budget").innerText="¥"+budget
@@ -200,16 +179,33 @@ document.getElementById("budget").innerText="¥"+budget
 function toggleDiscount(){
 
 let area=document.getElementById("discountArea")
+let btn=document.getElementById("discountBtn")
 
 area.classList.toggle("hidden")
+
+btn.innerText=area.classList.contains("hidden")?"＋値引き":"－値引き"
+
+}
+
+function toggleHistory(){
+
+let area=document.getElementById("historyArea")
+let btn=document.getElementById("historyBtn")
+
+area.classList.toggle("hidden")
+
+btn.innerText=area.classList.contains("hidden")?"＋履歴":"－履歴"
 
 }
 
 function toggleCategoryManager(){
 
 let area=document.getElementById("categoryManager")
+let btn=document.getElementById("catBtn")
 
 area.classList.toggle("hidden")
+
+btn.innerText=area.classList.contains("hidden")?"＋カテゴリ管理":"－カテゴリ管理"
 
 }
 
@@ -221,7 +217,7 @@ if(newBudget){
 
 budget=Number(newBudget)
 
-localStorage.setItem("budget",budget)
+localStorage.setItem("money_app_budget",budget)
 
 document.getElementById("budget").innerText="¥"+budget
 
@@ -267,7 +263,7 @@ if(!newCat)return
 
 categories.push(newCat)
 
-localStorage.setItem("categories",JSON.stringify(categories))
+localStorage.setItem("money_app_categories",JSON.stringify(categories))
 
 document.getElementById("newCategory").value=""
 
@@ -281,7 +277,7 @@ if(confirm("削除してよろしいですか？")){
 
 categories.splice(i,1)
 
-localStorage.setItem("categories",JSON.stringify(categories))
+localStorage.setItem("money_app_categories",JSON.stringify(categories))
 
 renderCategories()
 
@@ -292,13 +288,9 @@ renderCategories()
 function addExpense(){
 
 let amount=Number(document.getElementById("amount").value)
-
 let discountAmount=Number(document.getElementById("discountAmount").value)
-
 let discountPercent=Number(document.getElementById("discountPercent").value)
-
 let category=document.getElementById("category").value
-
 let item=document.getElementById("item").value
 
 if(!amount)return
@@ -306,28 +298,22 @@ if(!amount)return
 let final=amount
 
 if(discountPercent){
-
 final=amount-(amount*discountPercent/100)
-
 }
 
 if(discountAmount){
-
 final=amount-discountAmount
-
 }
 
 expenses.push({
-
 amount:amount,
 final:Math.round(final),
 category:category,
 item:item,
 date:new Date().toLocaleDateString()
-
 })
 
-localStorage.setItem("expenses",JSON.stringify(expenses))
+localStorage.setItem("money_app_expenses",JSON.stringify(expenses))
 
 document.getElementById("amount").value=""
 document.getElementById("item").value=""
@@ -344,7 +330,7 @@ if(confirm("削除してよろしいですか？")){
 
 expenses.splice(i,1)
 
-localStorage.setItem("expenses",JSON.stringify(expenses))
+localStorage.setItem("money_app_expenses",JSON.stringify(expenses))
 
 update()
 
@@ -358,10 +344,9 @@ let total=0
 let original=0
 
 let html=""
-
 let catTotal={}
 
-expenses.forEach((e,i)=>{
+expenses.slice().reverse().forEach((e,i)=>{
 
 total+=e.final
 original+=e.amount
@@ -369,17 +354,13 @@ original+=e.amount
 html+=e.date+" "+e.category+" "+e.item+" ¥"+e.final
 
 if(e.amount!=e.final){
-
 html+=" (元¥"+e.amount+")"
-
 }
 
-html+="<br><button class='deleteBtn' onclick='deleteExpense("+i+")'>削除</button><br><br>"
+html+="<br><br>"
 
 if(!catTotal[e.category]){
-
 catTotal[e.category]=0
-
 }
 
 catTotal[e.category]+=e.final
@@ -403,33 +384,21 @@ drawChart(catTotal)
 function drawChart(data){
 
 let labels=Object.keys(data)
-
 let values=Object.values(data)
 
 if(window.chart){
-
 chart.destroy()
-
 }
 
 window.chart=new Chart(
-
 document.getElementById("chart"),
-
 {
-
 type:"pie",
-
 data:{
-
 labels:labels,
-
 datasets:[{data:values}]
-
 }
-
 }
-
 )
 
 }
@@ -439,35 +408,30 @@ function exportCSV(){
 let csv="日付,カテゴリ,商品名,元値,支払額\n"
 
 expenses.forEach(e=>{
-
 csv+=`${e.date},${e.category},${e.item},${e.amount},${e.final}\n`
-
 })
 
 let blob=new Blob([csv])
-
 let link=document.createElement("a")
-
 link.href=URL.createObjectURL(blob)
-
 link.download="money_export.csv"
-
 link.click()
 
 }
 
 function exportJSON(){
 
-let data={budget,expenses,categories}
+let data={
+app:"money_app",
+budget:budget,
+expenses:expenses,
+categories:categories
+}
 
 let blob=new Blob([JSON.stringify(data)])
-
 let link=document.createElement("a")
-
 link.href=URL.createObjectURL(blob)
-
 link.download="money_backup.json"
-
 link.click()
 
 }
@@ -484,13 +448,18 @@ reader.onload=function(){
 
 let data=JSON.parse(reader.result)
 
+if(data.app!=="money_app"){
+alert("このアプリのデータではありません")
+return
+}
+
 budget=data.budget
 expenses=data.expenses
 categories=data.categories
 
-localStorage.setItem("budget",budget)
-localStorage.setItem("expenses",JSON.stringify(expenses))
-localStorage.setItem("categories",JSON.stringify(categories))
+localStorage.setItem("money_app_budget",budget)
+localStorage.setItem("money_app_expenses",JSON.stringify(expenses))
+localStorage.setItem("money_app_categories",JSON.stringify(categories))
 
 document.getElementById("budget").innerText="¥"+budget
 
@@ -505,6 +474,10 @@ reader.readAsText(file)
 
 renderCategories()
 update()
+
+if ("serviceWorker" in navigator) {
+navigator.serviceWorker.register("service-worker.js")
+}
 
 </script>
 
