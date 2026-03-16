@@ -281,6 +281,8 @@ localStorage.setItem("money_app_categories",JSON.stringify(categories))
 
 renderCategories()
 
+update()
+
 }
 
 }
@@ -346,10 +348,20 @@ let original=0
 let html=""
 let catTotal={}
 
-expenses.slice().reverse().forEach((e,i)=>{
+expenses.forEach((e)=>{
 
 total+=e.final
 original+=e.amount
+
+if(!catTotal[e.category]){
+catTotal[e.category]=0
+}
+
+catTotal[e.category]+=e.final
+
+})
+
+expenses.slice().reverse().forEach((e,i)=>{
 
 html+=e.date+" "+e.category+" "+e.item+" ¥"+e.final
 
@@ -358,12 +370,6 @@ html+=" (元¥"+e.amount+")"
 }
 
 html+="<br><br>"
-
-if(!catTotal[e.category]){
-catTotal[e.category]=0
-}
-
-catTotal[e.category]+=e.final
 
 })
 
@@ -383,22 +389,49 @@ drawChart(catTotal)
 
 function drawChart(data){
 
-let labels=Object.keys(data)
-let values=Object.values(data)
+let labels = Object.keys(data)
+let values = Object.values(data)
 
 if(window.chart){
-chart.destroy()
+window.chart.destroy()
 }
 
-window.chart=new Chart(
+if(labels.length===0)return
+
+let colors = labels.map((_,i)=>{
+
+let hue = (i * 360 / labels.length)
+
+return `hsl(${hue},70%,60%)`
+
+})
+
+window.chart = new Chart(
+
 document.getElementById("chart"),
+
 {
 type:"pie",
+
 data:{
 labels:labels,
-datasets:[{data:values}]
+
+datasets:[{
+data:values,
+backgroundColor:colors
+}]
+},
+
+options:{
+plugins:{
+legend:{
+position:"bottom"
 }
 }
+}
+
+}
+
 )
 
 }
